@@ -172,6 +172,24 @@ def get_session():
             }}
             .btn:hover {{ background: #181818; color: #1DB954; border: 1px solid #1DB954; }}
         </style>
+        <script>
+        function createPlaylist(event) {{
+            event.preventDefault();
+            var btn = document.getElementById('create-playlist-btn');
+            btn.disabled = true;
+            btn.innerText = 'Creating...';
+            var form = btn.closest('form');
+            var formData = new FormData(form);
+            fetch('/create_playlist_from_session', {{
+                method: 'POST',
+                body: formData
+            }})
+            .then(resp => resp.text())
+            .then(html => {{
+                btn.parentNode.innerHTML = html;
+            }});
+        }}
+        </script>
     </head>
     <body>
         <h1>Spotify Listening Session</h1>
@@ -181,9 +199,9 @@ def get_session():
             <p><strong>Session End Time:</strong> {end}</p>
             <p><strong>Total Duration:</strong> {duration} minutes</p>
             <p><strong>Number of Songs Played:</strong> {len(songs)}</p>
-            <form action="/create_playlist_from_session" method="post">
+            <form action="/create_playlist_from_session" method="post" onsubmit="createPlaylist(event)">
                 <input type="hidden" name="song_ids" value="{','.join(song_ids)}">
-                <button class="btn" type="submit">Create Playlist</button>
+                <button class="btn" id="create-playlist-btn" type="submit">Create Playlist</button>
             </form>
         </div>
         <h2>Tracks Played</h2>
@@ -207,7 +225,8 @@ def create_playlist_from_session():
     playlist = sp.user_playlist_create(user=user_id, name=f"Spotify Session {datetime.datetime.now().strftime('%Y%m%d%H%M%S')}", public=False)
     if song_ids and song_ids[0]:
         sp.playlist_add_items(playlist_id=playlist['id'], items=song_ids)
-    return f"<html><body style='background:#181818;color:#1DB954;font-family:Arial,sans-serif;'><h2>Playlist created!</h2><a href='{playlist['external_urls']['spotify']}' style='color:#1DB954;'>Open Playlist on Spotify</a></body></html>"
+    # Devolver solo el botón para abrir la playlist
+    return f"<a href='{playlist['external_urls']['spotify']}' class='btn' style='display:block;margin:1em auto 0 auto;text-align:center;' target='_blank'>Open Playlist on Spotify</a>"
 
 @app.route('/saved_sessions')
 def saved_sessions():
@@ -229,14 +248,16 @@ def saved_sessions():
     <html><head><title>Saved Sessions</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <style>
-    body { background: #181818; color: #fff; font-family: Arial, sans-serif; }
-    .session { background: #232323; border: 1px solid #1DB954; margin: 1em 0; padding: 1em; border-radius: 8px; }
+    body { background: #181818; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+    h1 { color: #1DB954; text-align: center; margin-top: 2em; }
+    .session { background: #232323; border: 1px solid #1DB954; margin: 1em 0; padding: 1em; border-radius: 8px; width: 100%; max-width: 500px; box-sizing: border-box; }
     .btn { background: #1DB954; color: #181818; border: none; border-radius: 6px; padding: 8px 18px; font-weight: bold; cursor: pointer; margin-top: 1em; }
     .btn:hover { background: #181818; color: #1DB954; border: 1px solid #1DB954; }
     a { color: #1DB954; }
     .tracks { display: none; margin-top: 1em; }
     .show { display: block; }
     .toggle-btn { background: #232323; color: #1DB954; border: 1px solid #1DB954; border-radius: 6px; padding: 4px 12px; cursor: pointer; margin-bottom: 0.5em; }
+    .no-sessions { color: #888; text-align: center; margin-top: 2em; }
     </style>
     <script>
     function toggleTracks(id) {
@@ -249,19 +270,23 @@ def saved_sessions():
     }
     </script>
     </head><body>
-    <h1>Saved Sessions (Spotify Playlists)</h1>
+    <h1>Saved Sessions</h1>
+    <div style='width:100%;display:flex;flex-direction:column;align-items:center;'>
     """
+    if not playlists:
+        html += "<div class='no-sessions'>No saved sessions found.</div>"
     for idx, playlist in enumerate(playlists):
         html += f"""
         <div class='session'>
             <p><strong>Name:</strong> {playlist['name']}</p>
             <p><strong>Tracks:</strong> {playlist['tracks']['total']}</p>
             <a href='{playlist['external_urls']['spotify']}' target='_blank'>Open Playlist on Spotify</a><br>
-            <button class='toggle-btn' onclick="toggleTracks('{idx}')">Show/Hide Songs</button>
+            <button class='toggle-btn' onclick=\"toggleTracks('{idx}')\">Show/Hide Songs</button>
             <div class='tracks' id='tracks-{idx}'>Loading...</div>
         </div>
         """
     html += """
+    </div>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const sessions = document.querySelectorAll('.session');
@@ -280,8 +305,7 @@ def saved_sessions():
         });
     });
     </script>
-    </body></html>"
-    """
+    </body></html>"""
     # Guardar los ids de playlist en sesión para poder consultarlos por índice
     session['playlist_ids'] = [p['id'] for p in playlists]
     return html

@@ -1,6 +1,6 @@
 import os
 import datetime
-from flask import Flask, redirect, request, session, jsonify, send_from_directory
+from flask import Flask, redirect, request, session, jsonify, send_from_directory, Response
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -42,7 +42,7 @@ def get_session():
 
     items = results.get('items', [])
     if not items:
-        return jsonify({'error': 'No recent tracks found'})
+        return Response("<h2>No recent tracks found</h2>", mimetype='text/html')
 
     tracks = []
     for item in items:
@@ -62,14 +62,73 @@ def get_session():
     start = session_tracks[0][0].isoformat()
     end = session_tracks[-1][0].isoformat()
     duration = round((session_tracks[-1][0] - session_tracks[0][0]).total_seconds() / 60, 2)
+    songs = [t[1] for t in session_tracks]
 
-    return jsonify({
-        "songs_count": len(session_tracks),
-        "start_time": start,
-        "end_time": end,
-        "total_duration_minutes": duration,
-        "songs": [t[1] for t in session_tracks]
-    })
+    # Build an HTML page with basic styles
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Spotify Session</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                margin: 40px auto;
+                max-width: 700px;
+                background: #f9f9f9;
+                color: #333;
+                line-height: 1.6;
+            }}
+            h1 {{
+                text-align: center;
+                color: #1DB954;
+            }}
+            .summary {{
+                background: #e8f5e9;
+                border: 1px solid #1DB954;
+                padding: 20px;
+                margin-bottom: 30px;
+                border-radius: 8px;
+            }}
+            .summary p {{
+                margin: 8px 0;
+                font-size: 1.1em;
+            }}
+            ul.songs {{
+                list-style: none;
+                padding: 0;
+            }}
+            ul.songs li {{
+                background: #fff;
+                margin-bottom: 8px;
+                padding: 12px 16px;
+                border-radius: 6px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                transition: background 0.3s ease;
+            }}
+            ul.songs li:hover {{
+                background: #d1f7d1;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Spotify Listening Session</h1>
+        <div class="summary">
+            <p><strong>Session Start Time:</strong> {start}</p>
+            <p><strong>Session End Time:</strong> {end}</p>
+            <p><strong>Total Duration:</strong> {duration} minutes</p>
+            <p><strong>Number of Songs Played:</strong> {len(songs)}</p>
+        </div>
+        <h2>Tracks Played</h2>
+        <ul class="songs">
+            {''.join(f'<li>{i+1}. {song}</li>' for i, song in enumerate(songs))}
+        </ul>
+    </body>
+    </html>
+    """
+
+    return Response(html, mimetype='text/html')
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

@@ -106,11 +106,18 @@ def get_session():
                 padding: 12px 16px;
                 border-radius: 6px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-                transition: background 0.3s ease;
+                transition: background 0.3s ease, color 0.3s ease;
                 color: #fff;
+            }}
+            ul.songs li span {{
+                color: #1DB954;
+                transition: color 0.3s ease;
             }}
             ul.songs li:hover {{
                 background: #1DB954;
+                color: #181818;
+            }}
+            ul.songs li:hover span {{
                 color: #181818;
             }}
         </style>

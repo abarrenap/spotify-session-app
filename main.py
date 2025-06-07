@@ -48,7 +48,8 @@ def get_session():
     for item in items:
         played_at = datetime.datetime.strptime(item['played_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
         played_at = played_at.replace(tzinfo=datetime.timezone.utc)
-        tracks.append((played_at, item['track']['name']))
+        artist = ', '.join([a['name'] for a in item['track']['artists']])
+        tracks.append((played_at, item['track']['name'], artist))
 
     tracks.sort()
     session_tracks = [tracks[-1]]
@@ -59,12 +60,12 @@ def get_session():
         else:
             break
 
-    start = session_tracks[0][0].isoformat()
-    end = session_tracks[-1][0].isoformat()
+    start = session_tracks[0][0].strftime("%H:%M")
+    end = session_tracks[-1][0].strftime("%H:%M")
     duration = round((session_tracks[-1][0] - session_tracks[0][0]).total_seconds() / 60, 2)
-    songs = [t[1] for t in session_tracks]
+    songs = [(t[1], t[2]) for t in session_tracks]
 
-    # Build an HTML page with basic styles
+    # Build an HTML page with dark theme and artist name
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -76,8 +77,8 @@ def get_session():
                 font-family: Arial, sans-serif;
                 margin: 40px auto;
                 max-width: 700px;
-                background: #f9f9f9;
-                color: #333;
+                background: #181818;
+                color: #fff;
                 line-height: 1.6;
             }}
             h1 {{
@@ -85,7 +86,7 @@ def get_session():
                 color: #1DB954;
             }}
             .summary {{
-                background: #e8f5e9;
+                background: #232323;
                 border: 1px solid #1DB954;
                 padding: 20px;
                 margin-bottom: 30px;
@@ -100,15 +101,17 @@ def get_session():
                 padding: 0;
             }}
             ul.songs li {{
-                background: #fff;
+                background: #282828;
                 margin-bottom: 8px;
                 padding: 12px 16px;
                 border-radius: 6px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.15);
                 transition: background 0.3s ease;
+                color: #fff;
             }}
             ul.songs li:hover {{
-                background: #d1f7d1;
+                background: #1DB954;
+                color: #181818;
             }}
         </style>
     </head>
@@ -122,7 +125,7 @@ def get_session():
         </div>
         <h2>Tracks Played</h2>
         <ul class="songs">
-            {''.join(f'<li>{i+1}. {song}</li>' for i, song in enumerate(songs))}
+            {''.join(f'<li>{i+1}. {song} <span style="color:#1DB954;">by {artist}</span></li>' for i, (song, artist) in enumerate(songs))}
         </ul>
     </body>
     </html>

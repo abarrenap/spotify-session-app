@@ -62,7 +62,10 @@ def get_session():
 
     start = session_tracks[0][0].strftime("%H:%M")
     end = session_tracks[-1][0].strftime("%H:%M")
-    duration = round((session_tracks[-1][0] - session_tracks[0][0]).total_seconds() / 60, 2)
+    duration_seconds = int((session_tracks[-1][0] - session_tracks[0][0]).total_seconds())
+    duration_minutes = duration_seconds // 60
+    duration_secs = duration_seconds % 60
+    duration = f"{duration_minutes}:{duration_secs:02d}"
     songs = [(t[1], t[2]) for t in session_tracks]
 
     # Build an HTML page with dark theme and artist name

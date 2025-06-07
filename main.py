@@ -193,7 +193,6 @@ def get_session():
     </head>
     <body>
         <h1>Spotify Listening Session</h1>
-        <img src="/static/icon.png" alt="Spotify Logo" class="logo">
         <div class="summary">
             <p><strong>Session Start Time:</strong> {start}</p>
             <p><strong>Session End Time:</strong> {end}</p>
@@ -236,14 +235,18 @@ def saved_sessions():
     sp = Spotify(auth=token_info['access_token'])
     playlists = []
     results = sp.current_user_playlists(limit=50)
+    print('DEBUG: Fetched playlists:', results)  # DEBUG
     while results:
         for playlist in results['items']:
+            print('DEBUG: Playlist name:', playlist['name'])  # DEBUG
             if playlist['name'].startswith('Spotify Session'):
+                print('DEBUG: Matched session playlist:', playlist['name'])  # DEBUG
                 playlists.append(playlist)
         if results['next']:
             results = sp.next(results)
         else:
             results = None
+    print('DEBUG: Session playlists found:', len(playlists))  # DEBUG
     html = """
     <html><head><title>Saved Sessions</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>

@@ -132,7 +132,7 @@ def get_session():
         </div>
         <h2>Tracks Played</h2>
         <ul class="songs">
-            {''.join(f'<li>{i+1}. {song} <span style="color:#1DB954;">by {artist}</span></li>' for i, (song, artist) in enumerate(songs))}
+            {''.join(f'<li>{i+1}. {song} <span>by {artist}</span></li>' for i, (song, artist) in enumerate(songs))}
         </ul>
     </body>
     </html>

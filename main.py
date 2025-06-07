@@ -4,6 +4,8 @@ from flask import Flask, redirect, request, session, jsonify, send_from_director
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
+import json
+from uuid import uuid4
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get("FLASK_SECRET", "super_secret")
@@ -15,6 +17,18 @@ sp_oauth = SpotifyOAuth(
     redirect_uri=os.environ["SPOTIPY_REDIRECT_URI"],
     scope="user-read-recently-played"
 )
+
+SESSIONS_FILE = 'sessions.json'
+
+def load_sessions():
+    if not os.path.exists(SESSIONS_FILE):
+        return {}
+    with open(SESSIONS_FILE, 'r') as f:
+        return json.load(f)
+
+def save_sessions(sessions):
+    with open(SESSIONS_FILE, 'w') as f:
+        json.dump(sessions, f)
 
 @app.route('/')
 def index():
@@ -45,11 +59,14 @@ def get_session():
         return Response("<h2>No recent tracks found</h2>", mimetype='text/html')
 
     tracks = []
+    track_ids = []
     for item in items:
         played_at = datetime.datetime.strptime(item['played_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
         played_at = played_at.replace(tzinfo=datetime.timezone.utc)
         artist = ', '.join([a['name'] for a in item['track']['artists']])
-        tracks.append((played_at, item['track']['name'], artist))
+        track_id = item['track']['id']
+        tracks.append((played_at, item['track']['name'], artist, track_id))
+        track_ids.append(track_id)
 
     tracks.sort()
     session_tracks = [tracks[-1]]
@@ -67,19 +84,19 @@ def get_session():
     duration_secs = duration_seconds % 60
     duration = f"{duration_minutes}:{duration_secs:02d}"
     songs = [(t[1], t[2]) for t in session_tracks]
+    song_ids = [t[3] for t in session_tracks if t[3]]
 
-    # HTML con logo y metadatos Apple
     html = f"""
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang=\"en\">
     <head>
-        <meta charset="UTF-8" />
+        <meta charset=\"UTF-8\" />
         <title>Spotify Session</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="apple-touch-icon" href="/static/icon.png">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-title" content="Spotify Session">
-        <meta name="theme-color" content="#1DB954">
+        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+        <link rel=\"apple-touch-icon\" href=\"/static/icon.png\">
+        <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">
+        <meta name=\"apple-mobile-web-app-title\" content=\"Spotify Session\">
+        <meta name=\"theme-color\" content=\"#1DB954\">
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -134,6 +151,26 @@ def get_session():
             ul.songs li:hover span {{
                 color: #181818;
             }}
+            .playlist-link {{
+                display: block;
+                margin: 1em auto;
+                text-align: center;
+                color: #1DB954;
+                font-weight: bold;
+                font-size: 1.1em;
+                text-decoration: underline;
+            }}
+            .btn {{
+                background: #1DB954;
+                color: #181818;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 18px;
+                font-weight: bold;
+                cursor: pointer;
+                margin-top: 1em;
+            }}
+            .btn:hover {{ background: #181818; color: #1DB954; border: 1px solid #1DB954; }}
         </style>
     </head>
     <body>
@@ -144,6 +181,10 @@ def get_session():
             <p><strong>Session End Time:</strong> {end}</p>
             <p><strong>Total Duration:</strong> {duration} minutes</p>
             <p><strong>Number of Songs Played:</strong> {len(songs)}</p>
+            <form action="/create_playlist_from_session" method="post">
+                <input type="hidden" name="song_ids" value="{','.join(song_ids)}">
+                <button class="btn" type="submit">Create Playlist</button>
+            </form>
         </div>
         <h2>Tracks Played</h2>
         <ul class="songs">
@@ -154,6 +195,121 @@ def get_session():
     """
 
     return Response(html, mimetype='text/html')
+
+@app.route('/create_playlist_from_session', methods=['POST'])
+def create_playlist_from_session():
+    token_info = session.get('token_info')
+    if not token_info:
+        return redirect('/login')
+    sp = Spotify(auth=token_info['access_token'])
+    song_ids = request.form.get('song_ids', '').split(',')
+    user_id = sp.current_user()['id']
+    playlist = sp.user_playlist_create(user=user_id, name=f"Spotify Session {datetime.datetime.now().strftime('%Y%m%d%H%M%S')}", public=False)
+    if song_ids and song_ids[0]:
+        sp.playlist_add_items(playlist_id=playlist['id'], items=song_ids)
+    return f"<html><body style='background:#181818;color:#1DB954;font-family:Arial,sans-serif;'><h2>Playlist created!</h2><a href='{playlist['external_urls']['spotify']}' style='color:#1DB954;'>Open Playlist on Spotify</a></body></html>"
+
+@app.route('/saved_sessions')
+def saved_sessions():
+    token_info = session.get('token_info')
+    if not token_info:
+        return redirect('/login')
+    sp = Spotify(auth=token_info['access_token'])
+    playlists = []
+    results = sp.current_user_playlists(limit=50)
+    while results:
+        for playlist in results['items']:
+            if playlist['name'].startswith('Spotify Session'):
+                playlists.append(playlist)
+        if results['next']:
+            results = sp.next(results)
+        else:
+            results = None
+    html = """
+    <html><head><title>Saved Sessions</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+    body { background: #181818; color: #fff; font-family: Arial, sans-serif; }
+    .session { background: #232323; border: 1px solid #1DB954; margin: 1em 0; padding: 1em; border-radius: 8px; }
+    .btn { background: #1DB954; color: #181818; border: none; border-radius: 6px; padding: 8px 18px; font-weight: bold; cursor: pointer; margin-top: 1em; }
+    .btn:hover { background: #181818; color: #1DB954; border: 1px solid #1DB954; }
+    a { color: #1DB954; }
+    .tracks { display: none; margin-top: 1em; }
+    .show { display: block; }
+    .toggle-btn { background: #232323; color: #1DB954; border: 1px solid #1DB954; border-radius: 6px; padding: 4px 12px; cursor: pointer; margin-bottom: 0.5em; }
+    </style>
+    <script>
+    function toggleTracks(id) {
+        var el = document.getElementById('tracks-' + id);
+        if (el.classList.contains('show')) {
+            el.classList.remove('show');
+        } else {
+            el.classList.add('show');
+        }
+    }
+    </script>
+    </head><body>
+    <h1>Saved Sessions (Spotify Playlists)</h1>
+    """
+    for idx, playlist in enumerate(playlists):
+        html += f"""
+        <div class='session'>
+            <p><strong>Name:</strong> {playlist['name']}</p>
+            <p><strong>Tracks:</strong> {playlist['tracks']['total']}</p>
+            <a href='{playlist['external_urls']['spotify']}' target='_blank'>Open Playlist on Spotify</a><br>
+            <button class='toggle-btn' onclick="toggleTracks('{idx}')">Show/Hide Songs</button>
+            <div class='tracks' id='tracks-{idx}'>Loading...</div>
+        </div>
+        """
+    html += """
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sessions = document.querySelectorAll('.session');
+        sessions.forEach((session, idx) => {
+            session.querySelector('.toggle-btn').addEventListener('click', function() {
+                const tracksDiv = document.getElementById('tracks-' + idx);
+                if (!tracksDiv.dataset.loaded) {
+                    fetch('/playlist_tracks/' + idx)
+                        .then(resp => resp.text())
+                        .then(html => {
+                            tracksDiv.innerHTML = html;
+                            tracksDiv.dataset.loaded = '1';
+                        });
+                }
+            });
+        });
+    });
+    </script>
+    </body></html>"
+    """
+    # Guardar los ids de playlist en sesión para poder consultarlos por índice
+    session['playlist_ids'] = [p['id'] for p in playlists]
+    return html
+
+@app.route('/playlist_tracks/<int:idx>')
+def playlist_tracks(idx):
+    token_info = session.get('token_info')
+    if not token_info:
+        return 'Not logged in', 401
+    sp = Spotify(auth=token_info['access_token'])
+    playlist_ids = session.get('playlist_ids', [])
+    if idx >= len(playlist_ids):
+        return 'Not found', 404
+    playlist_id = playlist_ids[idx]
+    tracks = []
+    results = sp.playlist_tracks(playlist_id)
+    while results:
+        for item in results['items']:
+            track = item['track']
+            if track:
+                name = track['name']
+                artist = ', '.join([a['name'] for a in track['artists']])
+                tracks.append(f"<li>{name} <span>by {artist}</span></li>")
+        if results['next']:
+            results = sp.next(results)
+        else:
+            results = None
+    return f"<ul style='margin:0;padding-left:1em;'>{''.join(tracks)}</ul>"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

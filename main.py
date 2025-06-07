@@ -15,7 +15,7 @@ sp_oauth = SpotifyOAuth(
     client_id=os.environ["SPOTIPY_CLIENT_ID"],
     client_secret=os.environ["SPOTIPY_CLIENT_SECRET"],
     redirect_uri=os.environ["SPOTIPY_REDIRECT_URI"],
-    scope="user-read-recently-played"
+    scope="user-read-recently-played playlist-modify-private playlist-modify-public"
 )
 
 SESSIONS_FILE = 'sessions.json'

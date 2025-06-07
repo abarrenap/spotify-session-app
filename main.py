@@ -68,13 +68,18 @@ def get_session():
     duration = f"{duration_minutes}:{duration_secs:02d}"
     songs = [(t[1], t[2]) for t in session_tracks]
 
-    # Build an HTML page with dark theme and artist name
+    # HTML con logo y metadatos Apple
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8" />
         <title>Spotify Session</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="apple-touch-icon" href="/static/icon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="Spotify Session">
+        <meta name="theme-color" content="#1DB954">
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -88,13 +93,18 @@ def get_session():
                 text-align: center;
                 color: #1DB954;
             }}
+            .logo {{
+                display: block;
+                margin: 0 auto 2em auto;
+                width: 80px;
+            }}
             .summary {{
                 background: #232323;
                 border: 1px solid #1DB954;
                 padding: 20px;
                 margin-bottom: 30px;
                 border-radius: 8px;
-                text-align: center; /* <-- Añade esta línea para centrar el contenido */
+                text-align: center;
             }}
             .summary p {{
                 margin: 8px 0;
@@ -128,6 +138,7 @@ def get_session():
     </head>
     <body>
         <h1>Spotify Listening Session</h1>
+        <img src="/static/icon.png" alt="Spotify Logo" class="logo">
         <div class="summary">
             <p><strong>Session Start Time:</strong> {start}</p>
             <p><strong>Session End Time:</strong> {end}</p>

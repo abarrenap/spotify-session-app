@@ -6,6 +6,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 import json
 from uuid import uuid4
+import sys
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get("FLASK_SECRET", "super_secret")
@@ -235,18 +236,18 @@ def saved_sessions():
     sp = Spotify(auth=token_info['access_token'])
     playlists = []
     results = sp.current_user_playlists(limit=50)
-    print('DEBUG: Fetched playlists:', results)  # DEBUG
+    print('DEBUG: Fetched playlists:', results, file=sys.stderr, flush=True)  # DEBUG
     while results:
         for playlist in results['items']:
-            print('DEBUG: Playlist name:', playlist['name'])  # DEBUG
+            print('DEBUG: Playlist name:', playlist['name'], file=sys.stderr, flush=True)  # DEBUG
             if playlist['name'].startswith('Spotify Session'):
-                print('DEBUG: Matched session playlist:', playlist['name'])  # DEBUG
+                print('DEBUG: Matched session playlist:', playlist['name'], file=sys.stderr, flush=True)  # DEBUG
                 playlists.append(playlist)
         if results['next']:
             results = sp.next(results)
         else:
             results = None
-    print('DEBUG: Session playlists found:', len(playlists))  # DEBUG
+    print('DEBUG: Session playlists found:', len(playlists), file=sys.stderr, flush=True)  # DEBUG
     html = """
     <html><head><title>Saved Sessions</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>

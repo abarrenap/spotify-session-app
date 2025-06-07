@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: spotify-session-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: SPOTIPY_CLIENT_ID
+        value: 086055b23e5a4c16b521f000c34968c6
+      - key: SPOTIPY_CLIENT_SECRET
+        value: ye54c77d944f545ad9d56cf8c631c1e19
+      - key: SPOTIPY_REDIRECT_URI
+        value: https://spotify-session-app.onrender.com/callback
+      - key: FLASK_SECRET
+        value: nxYVBZrOlmgd428pRfe0r7UXVkKI6g7UGTmvyXOqw10

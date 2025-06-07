@@ -3,9 +3,14 @@ import datetime
 from flask import Flask, redirect, request, session, jsonify, send_from_directory
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
+import os
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get("FLASK_SECRET", "super_secret")
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
 sp_oauth = SpotifyOAuth(
     client_id=os.environ["SPOTIPY_CLIENT_ID"],

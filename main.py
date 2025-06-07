@@ -94,6 +94,7 @@ def get_session():
                 padding: 20px;
                 margin-bottom: 30px;
                 border-radius: 8px;
+                text-align: center; /* <-- Añade esta línea para centrar el contenido */
             }}
             .summary p {{
                 margin: 8px 0;

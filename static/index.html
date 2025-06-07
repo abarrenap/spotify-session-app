@@ -21,12 +21,13 @@
       text-align: center;
       margin-bottom: 2em;
     }
-    button {
+    .main-btn {
       display: block;
       margin: 2em auto;
       background: #1DB954;
       color: #181818;
-      border: none;
+      text-align: center;
+      text-decoration: none;
       border-radius: 6px;
       font-size: 1.2em;
       padding: 14px 32px;
@@ -35,7 +36,7 @@
       font-weight: bold;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
-    button:hover {
+    .main-btn:hover {
       background: #181818;
       color: #1DB954;
       border: 1px solid #1DB954;
@@ -53,6 +54,6 @@
 </head>
 <body>
   <h1>Spotify Session Viewer</h1>
-  <button onclick="window.location.href='/login'">Show My Last Session</button>
+  <a href="/login" class="main-btn">Show My Last Session</a>
 </body>
 </html>

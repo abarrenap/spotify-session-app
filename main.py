@@ -235,19 +235,16 @@ def saved_sessions():
         return redirect('/login')
     sp = Spotify(auth=token_info['access_token'])
     playlists = []
-    results = sp.current_user_playlists(limit=50)
-    print('DEBUG: Fetched playlists:', results, file=sys.stderr, flush=True)  # DEBUG
+    user_id = sp.current_user()['id']
+    results = sp.user_playlists(user=user_id, limit=50)
     while results:
         for playlist in results['items']:
-            print('DEBUG: Playlist name:', playlist['name'], file=sys.stderr, flush=True)  # DEBUG
-            if playlist['name'].startswith('Spotify Session'):
-                print('DEBUG: Matched session playlist:', playlist['name'], file=sys.stderr, flush=True)  # DEBUG
+            if playlist['owner']['id'] == user_id and playlist['name'].startswith('Spotify Session'):
                 playlists.append(playlist)
         if results['next']:
             results = sp.next(results)
         else:
             results = None
-    print('DEBUG: Session playlists found:', len(playlists), file=sys.stderr, flush=True)  # DEBUG
     html = """
     <html><head><title>Saved Sessions</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>

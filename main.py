@@ -237,14 +237,18 @@ def saved_sessions():
     playlists = []
     user_id = sp.current_user()['id']
     results = sp.user_playlists(user=user_id, limit=50)
+    print('DEBUG: user_id:', user_id, file=sys.stderr, flush=True)
     while results:
         for playlist in results['items']:
+            print('DEBUG: Playlist name:', playlist['name'], '| owner:', playlist['owner']['id'], '| public:', playlist['public'], file=sys.stderr, flush=True)
             if playlist['owner']['id'] == user_id and playlist['name'].startswith('Spotify Session'):
+                print('DEBUG: Matched session playlist:', playlist['name'], file=sys.stderr, flush=True)
                 playlists.append(playlist)
         if results['next']:
             results = sp.next(results)
         else:
             results = None
+    print('DEBUG: Session playlists found:', len(playlists), file=sys.stderr, flush=True)
     html = """
     <html><head><title>Saved Sessions</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>

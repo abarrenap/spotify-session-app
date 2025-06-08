@@ -31,6 +31,23 @@ def save_sessions(sessions):
     with open(SESSIONS_FILE, 'w') as f:
         json.dump(sessions, f)
 
+# Helper: get_token and save_token
+def get_token(user_id):
+    sessions = load_sessions()
+    token_info = sessions.get(user_id)
+    if not token_info:
+        return None
+    if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        sessions[user_id] = token_info
+        save_sessions(sessions)
+    return token_info
+
+def save_token(user_id, token_info):
+    sessions = load_sessions()
+    sessions[user_id] = token_info
+    save_sessions(sessions)
+
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
@@ -43,15 +60,18 @@ def login():
 def callback():
     code = request.args.get("code")
     token_info = sp_oauth.get_access_token(code)
-    session['token_info'] = token_info
+    sp = Spotify(auth=token_info['access_token'])
+    user_id = sp.current_user()['id']
+    save_token(user_id, token_info)
+    session['user_id'] = user_id
     return redirect('/session')
 
 @app.route('/session')
 def get_session():
-    token_info = session.get('token_info')
+    user_id = session.get('user_id')
+    token_info = get_token(user_id)
     if not token_info:
         return redirect('/login')
-
     sp = Spotify(auth=token_info['access_token'])
     results = sp.current_user_recently_played(limit=50)
 
@@ -216,7 +236,8 @@ def get_session():
 
 @app.route('/create_playlist_from_session', methods=['POST'])
 def create_playlist_from_session():
-    token_info = session.get('token_info')
+    user_id = session.get('user_id')
+    token_info = get_token(user_id)
     if not token_info:
         return redirect('/login')
     sp = Spotify(auth=token_info['access_token'])
@@ -230,7 +251,8 @@ def create_playlist_from_session():
 
 @app.route('/saved_sessions')
 def saved_sessions():
-    token_info = session.get('token_info')
+    user_id = session.get('user_id')
+    token_info = get_token(user_id)
     if not token_info:
         return redirect('/login')
     sp = Spotify(auth=token_info['access_token'])
@@ -314,7 +336,8 @@ def saved_sessions():
 
 @app.route('/playlist_tracks/<int:idx>')
 def playlist_tracks(idx):
-    token_info = session.get('token_info')
+    user_id = session.get('user_id')
+    token_info = get_token(user_id)
     if not token_info:
         return 'Not logged in', 401
     sp = Spotify(auth=token_info['access_token'])
